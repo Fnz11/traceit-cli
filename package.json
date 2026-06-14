@@ -1,10 +1,20 @@
 {
   "name": "traceit",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.1",
   "description": "Zero-dependency CLI that indexes code annotations for AI agents",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "traceit": "./bin/traceit.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",
@@ -14,6 +24,14 @@
   "keywords": ["ai", "agents", "annotations", "indexing", "documentation"],
   "license": "MIT",
   "author": "Fikri Nurdiansyah",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fnz11/traceit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Fnz11/traceit/issues"
+  },
+  "homepage": "https://github.com/Fnz11/traceit",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^18.19.0",
