@@ -1,0 +1,279 @@
+{
+  "version": "1",
+  "generated": "2026-06-14T18:36:04.114Z",
+  "domains": {
+    "infrastructure": [
+      "src\\cli.ts",
+      "src\\config.ts",
+      "src\\scanner.ts",
+      "src\\index.ts",
+      "src\\git.ts",
+      "src\\types.ts",
+      "src\\validator.ts",
+      "src\\query.ts",
+      "src\\writer.ts"
+    ],
+    "test": [
+      "tests\\fixtures\\sample.ts"
+    ]
+  },
+  "files": {
+    "src": {
+      "cli.ts": [
+        {
+          "title": "CLI Module",
+          "description": "Entry point. Parses args, routes to generate/validate/query/init commands.",
+          "domain": "infrastructure",
+          "exports": [
+            "main",
+            "runGenerate",
+            "runValidate",
+            "runQuery",
+            "runInit"
+          ],
+          "depends": [
+            "src/scanner.ts",
+            "src/writer.ts",
+            "src/config.ts",
+            "src/git.ts",
+            "src/validator.ts",
+            "src/query.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            245
+          ],
+          "blockLines": [
+            1,
+            246
+          ]
+        }
+      ],
+      "config.ts": [
+        {
+          "title": "Config Module",
+          "description": "Loads and merges .traceit.config.json with sensible defaults. Provides getConfig() for all commands.",
+          "domain": "infrastructure",
+          "exports": [
+            "getConfig",
+            "DEFAULT_CONFIG",
+            "loadConfigFile"
+          ],
+          "depends": [
+            "src/types.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            63
+          ],
+          "blockLines": [
+            1,
+            64
+          ]
+        }
+      ],
+      "git.ts": [
+        {
+          "title": "Git Module",
+          "description": "Wrapper for git blame. Gets last commit date per line range for validation.",
+          "domain": "infrastructure",
+          "exports": [
+            "getLastChangeForLines",
+            "isGitRepo",
+            "getFileBlame"
+          ],
+          "depends": null,
+          "danger": null,
+          "codeLines": [
+            6,
+            91
+          ],
+          "blockLines": [
+            1,
+            92
+          ]
+        }
+      ],
+      "index.ts": [
+        {
+          "title": "Index Module",
+          "description": "Main export barrel. Re-exports all public functions.",
+          "domain": "infrastructure",
+          "exports": [
+            "scan",
+            "writeIndex",
+            "validate",
+            "queryIndex",
+            "getConfig",
+            "initConfig",
+            "main"
+          ],
+          "depends": [
+            "src/scanner.ts",
+            "src/writer.ts",
+            "src/validator.ts",
+            "src/query.ts",
+            "src/config.ts",
+            "src/cli.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            13
+          ],
+          "blockLines": [
+            1,
+            14
+          ]
+        }
+      ],
+      "query.ts": [
+        {
+          "title": "Query Module",
+          "description": "Filters traceit.json by domain, file, keyword, or danger flag. Core of query command.",
+          "domain": "infrastructure",
+          "exports": [
+            "queryIndex"
+          ],
+          "depends": [
+            "src/types.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            77
+          ],
+          "blockLines": [
+            1,
+            78
+          ]
+        }
+      ],
+      "scanner.ts": [
+        {
+          "title": "Scanner Module",
+          "description": "Walks project directories, finds @traceit blocks, parses all annotation fields. Core of generate command.",
+          "domain": "infrastructure",
+          "exports": [
+            "scan",
+            "parseBlock",
+            "getCommentPrefix",
+            "walkDir"
+          ],
+          "depends": [
+            "src/types.ts",
+            "src/config.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            391
+          ],
+          "blockLines": [
+            1,
+            392
+          ]
+        }
+      ],
+      "types.ts": [
+        {
+          "title": "Types Module",
+          "description": "Shared TypeScript interfaces for traceit. Defines all data structures used across scanner, validator, query, and CLI.",
+          "domain": "infrastructure",
+          "exports": [
+            "TraceitConfig",
+            "TraceitBlock",
+            "TraceitFile",
+            "TraceitIndex",
+            "ValidationReport",
+            "QueryOptions"
+          ],
+          "depends": null,
+          "danger": null,
+          "codeLines": [
+            6,
+            89
+          ],
+          "blockLines": [
+            1,
+            90
+          ]
+        }
+      ],
+      "validator.ts": [
+        {
+          "title": "Validator Module",
+          "description": "Validates annotations against git history. Checks stale blocks, broken depends, missing annotations.",
+          "domain": "infrastructure",
+          "exports": [
+            "validate"
+          ],
+          "depends": [
+            "src/types.ts",
+            "src/git.ts",
+            "src/config.ts",
+            "src/scanner.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            160
+          ],
+          "blockLines": [
+            1,
+            161
+          ]
+        }
+      ],
+      "writer.ts": [
+        {
+          "title": "Writer Module",
+          "description": "Serializes and writes traceit.json. Handles output path from config or CLI override.",
+          "domain": "infrastructure",
+          "exports": [
+            "writeIndex"
+          ],
+          "depends": [
+            "src/types.ts",
+            "src/config.ts"
+          ],
+          "danger": null,
+          "codeLines": [
+            7,
+            23
+          ],
+          "blockLines": [
+            1,
+            24
+          ]
+        }
+      ]
+    },
+    "tests": {
+      "fixtures": {
+        "sample.ts": [
+          {
+            "title": "Sample Function",
+            "description": "A sample function for testing",
+            "domain": "test",
+            "exports": [
+              "sampleFunc"
+            ],
+            "depends": null,
+            "danger": null,
+            "codeLines": [
+              6,
+              8
+            ],
+            "blockLines": [
+              1,
+              9
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

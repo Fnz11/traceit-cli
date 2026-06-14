@@ -1,0 +1,8 @@
+skills-lock.json
+.agents
+prd.md
+/node_modules
+/dist
+traceit.json
+.traceit.config.json
+/bin
