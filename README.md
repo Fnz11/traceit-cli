@@ -113,14 +113,14 @@ Works with any language — comments only, no AST.
 ### Installation
 
 ```sh
-npx traceit init
+npx traceit-cli init
 ```
 
 No install needed — run directly via `npx`. The `init` command scaffolds a config file.
 
 ### First-time setup
 
-Run `npx traceit init`, then paste this prompt to your AI agent:
+Run `npx traceit-cli init`, then paste this prompt to your AI agent:
 
 ````markdown
 Annotate every logical unit (function, class, module, API route) with `@traceit:*` blocks.
@@ -163,7 +163,7 @@ Works in any language — just use the correct comment syntax (`#` for Python, `
 - Blocks cannot nest
 - Fields are case-insensitive
 
-After annotating all files, run: `npx traceit generate`
+After annotating all files, run: `npx traceit-cli generate`
 ````
 
 The agent will annotate every file, then generate `traceit.json`.
@@ -208,13 +208,13 @@ export function handleStripeWebhook(req: Request, res: Response) {
 
 ### On every session start
 1. Read `traceit.json` at the project root to understand the codebase
-2. Run `npx traceit validate` to check if annotations are still accurate
-3. Use `npx traceit query --domain <name>` to get context for a specific domain
+2. Run `npx traceit-cli validate` to check if annotations are still accurate
+3. Use `npx traceit-cli query --domain <name>` to get context for a specific domain
 4. Only open source files when traceit tells you they are relevant to your task
 
 ### After making code changes
 1. Update `@traceit:description`, `@traceit:exports`, `@traceit:depends` on any blocks you modified
-2. Run `npx traceit generate` to rebuild the index — this must be the very last step
+2. Run `npx traceit-cli generate` to rebuild the index — this must be the very last step
 3. If CI fails with stale blocks, read the stale report and update the annotations
 ````
 
@@ -241,23 +241,23 @@ Place `@traceit:start` / `@traceit:end` markers around any code block. Fields go
 
 ```sh
 # Scan project and generate traceit.json
-npx traceit generate
+npx traceit-cli generate
 
 # Quiet mode — summary output only
-npx traceit generate --quiet
+npx traceit-cli generate --quiet
 
 # Limit file count or directory depth (large repos)
-npx traceit generate --max-files 5000 --max-depth 5
+npx traceit-cli generate --max-files 5000 --max-depth 5
 
 # Check annotations against git history
-npx traceit validate
+npx traceit-cli validate
 
 # Filter the index
-npx traceit query --domain billing
-npx traceit query --keyword webhook
+npx traceit-cli query --domain billing
+npx traceit-cli query --keyword webhook
 
 # Scaffold config
-npx traceit init
+npx traceit-cli init
 ```
 
 Options: `--out`, `--ignore`, `--ext`, `--format`, `--quiet`, `--max-files`, `--max-depth`, `--domain`, `--file`, `--keyword`, `--danger`.
