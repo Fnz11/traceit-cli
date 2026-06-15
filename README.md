@@ -310,6 +310,24 @@ npx traceit-cli init
 
 Options: `--out`, `--ignore`, `--ext`, `--format`, `--quiet`, `--max-files`, `--max-depth`, `--domain`, `--file`, `--keyword`, `--danger`, `--top`, `--verbose`, `--debug`, `--version`, `--sequential`.
 
+### CI Integration
+
+Add this workflow to `.github/workflows/validate.yml` to check annotations on every push and PR:
+
+```yaml
+name: Check traceit annotations
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npx traceit-cli validate
+```
+
 ### Configuration
 
 `.traceit.config.json` supports these fields:

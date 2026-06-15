@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.1.2] - 2026-06-15
 
+### Added
+
+- **GitHub Actions CI workflow**: added `.github/workflows/validate.yml` that runs `npx traceit-cli validate` on every push and PR. Users can copy it directly.
+
 ### Fixed
 
 - **Critical: parseBlock infinite loop**: Fixed bug where missing `@traceit:end` tag caused infinite loop by initializing `endLine = -1` instead of `startLine`. Now returns `null` if no end tag found.
@@ -77,6 +81,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `missing_annotation` check is fully implemented.
 
 <!-- Versions -->
-[0.1.2]: https://github.com/Fnz11/traceit/releases/tag/v0.1.2
+[0.1.2]: https://github.com/Fnz11/traceit-cli/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Fnz11/traceit-cli/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Fnz11/traceit-cli/releases/tag/v0.1.0
