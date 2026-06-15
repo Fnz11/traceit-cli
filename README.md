@@ -98,7 +98,8 @@ Works with any language — comments only, no AST.
 - **Zero dependencies** — stdlib only. `fs`, `path`, `child_process`
 - **Agent-first output** — JSON schema optimized for LLM consumption
 - **Stale detection** — `validate` command checks annotations against git history
-- **Domain queries** — filter index by domain, file, or keyword
+- **Fuzzy search** — tokenizes query, scores by relevance across title/description/domain/exports/depends, ranks results
+- **Terminal-friendly** — compact ranked output, `--top <n>` limits results, `--verbose` for full details
 - **Self-healing** — stale report feeds back into agent loop for auto-updates
 - **Large codebase ready** — concurrent scanning, `.gitignore` awareness, binary detection, configurable file/depth limits
 - **Minimal output** — periodic or summary-only progress modes avoid stderr noise
@@ -210,7 +211,8 @@ export function handleStripeWebhook(req: Request, res: Response) {
 1. Read `traceit.json` at the project root to understand the codebase
 2. Run `npx traceit-cli validate` to check if annotations are still accurate
 3. Use `npx traceit-cli query --domain <name>` to get context for a specific domain
-4. Only open source files when traceit tells you they are relevant to your task
+4. Use `npx traceit-cli query --keyword "<fuzzy search>"` to find blocks by relevance — results are ranked with match scores
+5. Only open source files when traceit tells you they are relevant to your task
 
 ### After making code changes
 1. Update `@traceit:description`, `@traceit:exports`, `@traceit:depends` on any blocks you modified
@@ -254,13 +256,18 @@ npx traceit-cli validate
 
 # Filter the index
 npx traceit-cli query --domain billing
-npx traceit-cli query --keyword webhook
+
+# Fuzzy keyword search — ranked by relevance
+npx traceit-cli query --keyword "stripe webhook"
+npx traceit-cli query --keyword "cli scan" --top 5
+npx traceit-cli query --keyword "db query" --verbose
+npx traceit-cli query --keyword "ai agent" --top 10 --out results.txt
 
 # Scaffold config
 npx traceit-cli init
 ```
 
-Options: `--out`, `--ignore`, `--ext`, `--format`, `--quiet`, `--max-files`, `--max-depth`, `--domain`, `--file`, `--keyword`, `--danger`.
+Options: `--out`, `--ignore`, `--ext`, `--format`, `--quiet`, `--max-files`, `--max-depth`, `--domain`, `--file`, `--keyword`, `--danger`, `--top`, `--verbose`, `--debug`, `--version`, `--sequential`.
 
 ### Configuration
 

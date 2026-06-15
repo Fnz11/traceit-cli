@@ -6,6 +6,7 @@
 // @traceit:depends: src/types.ts, src/config.ts
 
 import { promises as fs } from 'fs';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { exec } from 'child_process';
@@ -19,6 +20,7 @@ const END_TAG = '@traceit:end';
 const REQUIRED_FIELDS = ['title', 'description'];
 const MAX_FILE_SIZE = 1 * 1024 * 1024;
 const PROGRESS_INTERVAL = 100;
+const FILE_TIMEOUT = 5000;
 
 const FIELD_PATTERN = /^@traceit:(\w+):\s*(.*)$/;
 const COMMENT_PREFIXES: Record<string, RegExp> = {
@@ -60,12 +62,13 @@ function parseAnnotationLine(line: string): { key: string; value: string } | nul
 
 export function parseBlock(lines: string[], startLine: number): ParsedAnnotation | null {
   const fields: Record<string, string> = {};
-  let endLine = startLine;
+  let endLine = -1;
   let codeStartLine = -1;
   let codeEndLine = -1;
   let foundStart = false;
+  const maxScan = Math.min(startLine + 5000, lines.length);
 
-  for (let i = startLine; i < lines.length; i++) {
+  for (let i = startLine; i < maxScan; i++) {
     const line = lines[i];
     const prefix = getCommentPrefix(line);
     const content = prefix ? stripComment(line, prefix) : line.trim();
@@ -94,7 +97,7 @@ export function parseBlock(lines: string[], startLine: number): ParsedAnnotation
     }
   }
 
-  if (!foundStart || codeStartLine === -1) return null;
+  if (!foundStart || endLine === -1 || codeStartLine === -1) return null;
 
   return {
     fields,
@@ -175,27 +178,38 @@ export async function walkDir(
 
 async function filterGitIgnored(files: string[]): Promise<string[]> {
   if (files.length === 0) return files;
-  try {
-    const quoted = files.map(f => `"${f}"`).join(' ');
-    const { stdout } = await execAsync(`git check-ignore ${quoted}`, { cwd: process.cwd() });
-    const ignoredSet = new Set(stdout.split('\n').filter(Boolean).map(l => path.resolve(process.cwd(), l.trim())));
-    return files.filter(f => !ignoredSet.has(f));
-  } catch {
-    return files;
+
+  const ignoredSet = new Set<string>();
+  const batchSize = 50;
+
+  for (let i = 0; i < files.length; i += batchSize) {
+    const batch = files.slice(i, i + batchSize);
+    try {
+      const quoted = batch.map(f => `"${f}"`).join(' ');
+      const { stdout } = await execAsync(`git check-ignore ${quoted}`, { cwd: process.cwd() });
+      for (const line of stdout.split('\n').filter(Boolean)) {
+        ignoredSet.add(path.resolve(process.cwd(), line.trim()));
+      }
+    } catch {
+      // git check-ignore exits 1 when nothing is ignored — expected
+    }
   }
+
+  return files.filter(f => !ignoredSet.has(f));
 }
 
-async function isBinaryFile(filePath: string): Promise<boolean> {
-  let fd: fs.FileHandle | null = null;
+function isBinaryFile(filePath: string): boolean {
   try {
-    fd = await fs.open(filePath, 'r');
-    const buf = Buffer.alloc(512);
-    const { bytesRead } = await fd.read(buf, 0, 512, 0);
-    return bytesRead > 0 && buf.slice(0, bytesRead).includes(0);
+    const fd = fsSync.openSync(filePath, 'r');
+    try {
+      const buf = Buffer.alloc(512);
+      const bytesRead = fsSync.readSync(fd, buf, 0, 512, 0);
+      return bytesRead > 0 && buf.slice(0, bytesRead).includes(0);
+    } finally {
+      fsSync.closeSync(fd);
+    }
   } catch {
     return false;
-  } finally {
-    if (fd) await fd.close();
   }
 }
 
@@ -222,13 +236,14 @@ function validateConfig(config: TraceitConfig): void {
   }
 }
 
-function progressLines(relPath: string, idx: number, total: number, mode: string): void {
-  if (mode === 'summary') return;
-  if (mode === 'periodic') {
+function progressLines(relPath: string, idx: number, total: number, mode: string, debug: boolean): void {
+  if (mode === 'summary' && !debug) return;
+  if (mode === 'periodic' && !debug) {
     const i = idx + 1;
     if (i % PROGRESS_INTERVAL !== 0 && i !== total && i !== 1) return;
   }
-  process.stderr.write(`Scanning... [${idx + 1}/${total}] ${relPath}\n`);
+  // Use stdout instead of stderr to avoid Windows console blocking
+  process.stdout.write(`Scanning... [${idx + 1}/${total}] ${relPath}\n`);
 }
 
 interface FileResult {
@@ -244,14 +259,16 @@ async function processFile(
   total: number,
   config: TraceitConfig,
   domains: Record<string, string[]>,
+  debug: boolean,
 ): Promise<FileResult> {
   const relPath = path.relative(process.cwd(), filePath);
+  const start = debug ? Date.now() : 0;
 
-  progressLines(relPath, idx, total, config.progress);
+  progressLines(relPath, idx, total, config.progress, debug);
 
   let stat;
   try {
-    stat = await fs.stat(filePath);
+    stat = fsSync.statSync(filePath);
   } catch {
     return { relPath, blocks: [], skipped: false, sizeSkipped: false };
   }
@@ -260,11 +277,17 @@ async function processFile(
     return { relPath, blocks: [], skipped: false, sizeSkipped: true };
   }
 
-  if (await isBinaryFile(filePath)) {
+  if (isBinaryFile(filePath)) {
     return { relPath, blocks: [], skipped: false, sizeSkipped: false };
   }
 
-  const content = await fs.readFile(filePath, 'utf-8');
+  let content: string;
+  try {
+    content = fsSync.readFileSync(filePath, 'utf-8');
+  } catch (e) {
+    return { relPath, blocks: [], skipped: false, sizeSkipped: false };
+  }
+  
   const lines = content.split('\n');
   const blocks: TraceitBlock[] = [];
   let blocksSkippedHere = 0;
@@ -295,6 +318,11 @@ async function processFile(
         i = parsed.endLine - 1;
       }
     }
+  }
+
+  if (debug) {
+    const elapsed = Date.now() - start;
+    process.stdout.write(`[debug] [${idx + 1}/${total}] ${relPath} (${blocks.length} blocks, ${(stat.size / 1024).toFixed(1)}KB, ${elapsed}ms)\n`);
   }
 
   return { relPath, blocks, skipped: blocksSkippedHere > 0, sizeSkipped: false };
@@ -329,36 +357,76 @@ async function concurrentMap<T>(
   concurrency: number,
 ): Promise<void> {
   let index = 0;
+  const errors: Error[] = [];
+  
   const runNext = async (): Promise<void> => {
     while (index < items.length) {
       const i = index++;
-      await fn(items[i], i);
+      try {
+        await fn(items[i], i);
+      } catch (e) {
+        errors.push(e as Error);
+      }
     }
   };
+  
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runNext());
   await Promise.all(workers);
+  
+  if (errors.length > 0) {
+    throw errors[0];
+  }
 }
 
-export async function scan(config?: TraceitConfig): Promise<TraceitIndex> {
+export async function scan(config?: TraceitConfig, debug: boolean = false, sequential: boolean = false): Promise<TraceitIndex> {
   const cfg = config || getConfig();
   validateConfig(cfg);
+  const scanStart = debug ? Date.now() : 0;
 
-  let files = await walkDir(process.cwd(), cfg.ignore, cfg.ext, cfg.maxFiles, cfg.maxDepth);
-  files = await filterGitIgnored(files);
+  let files: string[];
+  if (debug) {
+    const t = Date.now();
+    files = await walkDir(process.cwd(), cfg.ignore, cfg.ext, cfg.maxFiles, cfg.maxDepth);
+    process.stdout.write(`[debug] walkDir: ${files.length} files in ${Date.now() - t}ms\n`);
+    const t2 = Date.now();
+    files = await filterGitIgnored(files);
+    process.stdout.write(`[debug] filterGitIgnored: ${files.length} files remain in ${Date.now() - t2}ms\n`);
+  } else {
+    files = await walkDir(process.cwd(), cfg.ignore, cfg.ext, cfg.maxFiles, cfg.maxDepth);
+    files = await filterGitIgnored(files);
+  }
 
   if (cfg.maxFiles > 0 && files.length > cfg.maxFiles) {
     files = files.slice(0, cfg.maxFiles);
   }
 
   const total = files.length;
-  const concurrency = os.cpus().length;
-  const domains: Record<string, string[]> = {};
+  const concurrency = sequential ? 1 : Math.min(os.cpus().length, 4);
   const results: FileResult[] = new Array(total);
 
   await concurrentMap(files, async (filePath, idx) => {
-    const result = await processFile(filePath, idx, total, cfg, domains);
+    const localDomains: Record<string, string[]> = {};
+    const result = await processFile(filePath, idx, total, cfg, localDomains, debug);
     results[idx] = result;
   }, concurrency);
+
+  // Merge domains from all results
+  const domains: Record<string, string[]> = {};
+  for (const result of results) {
+    if (result && result.blocks) {
+      const relPath = result.relPath;
+      for (const block of result.blocks) {
+        if (block.domain) {
+          if (!domains[block.domain]) {
+            domains[block.domain] = [];
+          }
+          if (!domains[block.domain].includes(relPath)) {
+            domains[block.domain].push(relPath);
+          }
+        }
+      }
+    }
+  }
 
   let blocksFound = 0;
   let blocksSkipped = 0;
@@ -373,14 +441,17 @@ export async function scan(config?: TraceitConfig): Promise<TraceitIndex> {
 
   const filesIndex = buildFilesIndex(results);
 
-  process.stderr.write(`Scanned ${total} files, found ${blocksFound} blocks, skipped ${blocksSkipped}`);
+  process.stdout.write(`Scanned ${total} files, found ${blocksFound} blocks, skipped ${blocksSkipped}`);
   if (filesSkippedSize > 0) {
-    process.stderr.write(`, ${filesSkippedSize} files over size limit`);
+    process.stdout.write(`, ${filesSkippedSize} files over size limit`);
   }
   if (filesBinary > 0) {
-    process.stderr.write(`, ${filesBinary} binary files skipped`);
+    process.stdout.write(`, ${filesBinary} binary files skipped`);
   }
-  process.stderr.write('\n');
+  if (debug) {
+    process.stdout.write(` (${Date.now() - scanStart}ms total)`);
+  }
+  process.stdout.write('\n');
 
   return {
     version: '1',

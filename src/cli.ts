@@ -13,6 +13,15 @@ import { getConfig, initConfig } from './config';
 import { validate } from './validator';
 import { queryIndex } from './query';
 
+function getVersion(): string {
+  const pkgPath = path.join(__dirname, '..', 'package.json');
+  return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
+}
+
+function showVersion(): void {
+  console.log(`traceit-cli v${getVersion()}`);
+}
+
 function showHelp(): void {
   console.log(`
 traceit - Zero-dependency CLI for AI agent code annotations
@@ -28,24 +37,33 @@ Commands:
 
 Options:
   --help          Show this help
-  --out <path>    Output file path
+  --version, -v   Show version number
+  --out <path>    Output file path (write report to file instead of stdout)
   --ignore <paths>  Comma-separated paths to ignore
   --ext <extensions>  Comma-separated file extensions
   --format json|text  Output format (default: json)
   --quiet         Suppress per-file progress (summary only)
+  --debug         Print per-file timing info
+  --sequential    Process files one at a time (slower but avoids I/O contention)
   --max-files <n>  Stop after scanning n files
   --max-depth <n>  Limit directory traversal depth
   --domain <name>  Filter by domain (query)
   --file <path>   Filter by file (query)
-  --keyword <word>  Filter by keyword (query)
+  --keyword <word>  Fuzzy search across title/description/domain (query)
+  --top <n>       Show top N results (query, default: 20)
+  --verbose       Show full block details (query)
   --danger        Only blocks with danger field (query)
 
 Examples:
   traceit generate
   traceit generate --out ./docs/traceit.json
   traceit generate --quiet --max-files 5000
-  traceit validate --format json
-  traceit query --domain billing
+  traceit validate --format text
+  traceit validate --out stale-report.json
+  traceit query --keyword "stripe webhook"
+  traceit query --keyword billing --top 5
+  traceit query --keyword "db query" --verbose
+  traceit query --keyword agent --top 10 --out results.txt
   traceit init
 `);
 }
@@ -80,7 +98,12 @@ function parseArgs(args: string[]): Record<string, string | boolean | string[]> 
 
 export async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  
+
+  if (args.includes('--version') || args.includes('-v')) {
+    showVersion();
+    return;
+  }
+
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     showHelp();
     return;
@@ -88,6 +111,11 @@ export async function main(): Promise<void> {
 
   const parsed = parseArgs(args);
   const command = parsed._command as string;
+
+  if (!command) {
+    showHelp();
+    return;
+  }
 
   switch (command) {
     case 'generate':
@@ -125,7 +153,9 @@ async function runGenerate(parsed: Record<string, any>): Promise<void> {
     config.maxDepth = parseInt(parsed['max-depth'] as string, 10) || 0;
   }
 
-  const index = await scan(config);
+  const debug = parsed.debug === true;
+  const sequential = parsed.sequential === true;
+  const index = await scan(config, debug, sequential);
   await writeIndex(index, parsed.out as string | undefined);
 }
 
@@ -174,20 +204,30 @@ function formatValidateReport(report: any): string {
   return lines.join('\n');
 }
 
-function formatQueryResult(result: any): string {
+function formatQueryResult(result: any, verbose: boolean): string {
   const lines: string[] = [];
-  lines.push(`Query: ${JSON.stringify(result.query)}`);
-  lines.push(`Results: ${result.results.length}`);
+  lines.push(`Query: ${result.query.keyword || JSON.stringify(result.query)}`);
+  lines.push(`Matches: ${result.total_matches}, showing top ${result.shown}`);
   lines.push('');
 
-  for (const r of result.results) {
-    lines.push(`  ${r.file} - ${r.title}`);
-    lines.push(`    Domain: ${r.domain || '(none)'}`);
-    lines.push(`    Description: ${r.description}`);
-    if (r.exports) lines.push(`    Exports: ${r.exports.join(', ')}`);
-    if (r.depends) lines.push(`    Depends: ${r.depends.join(', ')}`);
-    if (r.danger) lines.push(`    Danger: ${r.danger}`);
-    lines.push('');
+  for (let i = 0; i < result.results.length; i++) {
+    const r = result.results[i];
+    const rank = `${i + 1}.`;
+    const score = r.score ? ` [${r.score}]` : '';
+    const matches = r.matches ? ` (${r.matches.join(', ')})` : '';
+
+    if (verbose) {
+      lines.push(`${rank} ${r.file} - ${r.title}${score}`);
+      lines.push(`    Domain: ${r.domain || '(none)'}`);
+      lines.push(`    Description: ${r.description}`);
+      if (r.exports) lines.push(`    Exports: ${r.exports.join(', ')}`);
+      if (r.depends) lines.push(`    Depends: ${r.depends.join(', ')}`);
+      if (r.danger) lines.push(`    Danger: ${r.danger}`);
+      if (matches) lines.push(`    Matches: ${matches}`);
+      lines.push('');
+    } else {
+      lines.push(`${rank}${score} ${r.file} - ${r.title}${matches}`);
+    }
   }
 
   return lines.join('\n');
@@ -195,17 +235,15 @@ function formatQueryResult(result: any): string {
 
 async function runValidate(format: 'json' | 'text' = 'json', outPath?: string): Promise<void> {
   const result = validate();
-  
+  const output = format === 'text' ? formatValidateReport(result) : JSON.stringify(result, null, 2);
+
   if (outPath) {
-    fs.writeFileSync(outPath, JSON.stringify(result, null, 2));
-  }
-  
-  if (format === 'text') {
-    console.log(formatValidateReport(result));
+    fs.writeFileSync(outPath, output, 'utf-8');
+    console.log(`Wrote ${outPath}`);
   } else {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(output);
   }
-  
+
   if (result.stale_blocks.length > 0 || result.broken_depends.length > 0) {
     process.exit(1);
   }
@@ -229,14 +267,18 @@ async function runQuery(args: Record<string, any>): Promise<void> {
     keyword: args.keyword as string | undefined,
     danger: args.danger === true,
     format: (args.format as 'json' | 'text') || 'json',
+    top: args.top ? parseInt(args.top as string, 10) : 20,
   };
-  
+
+  const verbose = args.verbose === true;
   const result = queryIndex(index, options);
-  
-  if (options.format === 'text') {
-    console.log(formatQueryResult(result));
+  const output = options.format === 'text' ? formatQueryResult(result, verbose) : JSON.stringify(result, null, 2);
+
+  if (args.out) {
+    fs.writeFileSync(args.out as string, output, 'utf-8');
+    console.log(`Wrote ${args.out}`);
   } else {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(output);
   }
 }
 

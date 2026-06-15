@@ -78,6 +78,7 @@ export interface QueryOptions {
   keyword?: string;
   danger?: boolean;
   format?: 'json' | 'text';
+  top?: number;
 }
 
 export interface ParsedAnnotation {
