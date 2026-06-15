@@ -12,12 +12,12 @@
   <p align="center">
    Zero-dependency CLI that indexes code annotations for AI agents
     <br />
-    <a href="https://github.com/Fnz11/traceit"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/Fnz11/traceit-cli"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Fnz11/traceit/issues/new?labels=bug">Report Bug</a>
+    <a href="https://github.com/Fnz11/traceit-cli/issues/new?labels=bug">Report Bug</a>
     ·
-    <a href="https://github.com/Fnz11/traceit/issues/new?labels=enhancement">Request Feature</a>
+    <a href="https://github.com/Fnz11/traceit-cli/issues/new?labels=enhancement">Request Feature</a>
   </p>
 </div>
 
@@ -239,6 +239,47 @@ Place `@traceit:start` / `@traceit:end` markers around any code block. Fields go
 | `@traceit:depends` | ⬜ | Comma-separated file paths this block depends on |
 | `@traceit:danger` | ⬜ | Critical warning for agents |
 
+### Generated Index Example
+
+Running `traceit-cli generate` produces a `traceit.json` like this:
+
+```json
+{
+  "version": "1",
+  "generated": "2026-06-15T07:09:59.077Z",
+  "domains": {
+    "infrastructure": ["src/cli.ts", "src/scanner.ts", "src/query.ts"],
+    "test": ["tests/fixtures/sample.ts"]
+  },
+  "files": {
+    "src": {
+      "cli.ts": [
+        {
+          "title": "CLI Module",
+          "description": "Entry point. Parses args, routes to generate/validate/query/init commands.",
+          "domain": "infrastructure",
+          "exports": ["main", "runGenerate", "runQuery"],
+          "depends": ["src/scanner.ts", "src/writer.ts", "src/query.ts"],
+          "danger": null,
+          "codeLines": [7, 287]
+        }
+      ],
+      "scanner.ts": [
+        {
+          "title": "Scanner Module",
+          "description": "Walks project directories, finds @traceit blocks, parses all annotation fields.",
+          "domain": "infrastructure",
+          "exports": ["scan", "parseBlock", "walkDir"],
+          "depends": ["src/types.ts", "src/config.ts"],
+          "danger": null,
+          "codeLines": [7, 462]
+        }
+      ]
+    }
+  }
+}
+```
+
 ### Commands
 
 ```sh
@@ -298,7 +339,7 @@ traceit/
 │   ├── config.ts        # Load .traceit.config.json with defaults
 │   └── types.ts         # Shared TypeScript interfaces
 ├── bin/
-│   └── traceit.js       # CLI entry point
+│   └── traceit-cli.js    # CLI entry point
 ├── tests/
 │   ├── fixtures/        # Sample files with @traceit annotations
 │   └── scanner.test.ts
@@ -324,18 +365,18 @@ Fikri Nurdiansyah
 [![tele][tele]][tele-url]
 [![linkedin][linkedin-shield]][linkedin-url]
 
-Project Link: [https://github.com/Fnz11/traceit](https://github.com/Fnz11/traceit)
+Project Link: [https://github.com/Fnz11/traceit-cli](https://github.com/Fnz11/traceit-cli)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 [forks-shield]: https://img.shields.io/github/forks/Fnz11/traceit.svg?style=for-the-badge
-[forks-url]: https://github.com/Fnz11/traceit/network/members
+[forks-url]: https://github.com/Fnz11/traceit-cli/network/members
 [stars-shield]: https://img.shields.io/github/stars/Fnz11/traceit.svg?style=for-the-badge
-[stars-url]: https://github.com/Fnz11/traceit/stargazers
+[stars-url]: https://github.com/Fnz11/traceit-cli/stargazers
 [issues-shield]: https://img.shields.io/github/issues/Fnz11/traceit.svg?style=for-the-badge
-[issues-url]: https://github.com/Fnz11/traceit/issues
+[issues-url]: https://github.com/Fnz11/traceit-cli/issues
 [license-shield]: https://img.shields.io/github/license/Fnz11/traceit.svg?style=for-the-badge
-[license-url]: https://github.com/Fnz11/traceit/blob/master/LICENSE
+[license-url]: https://github.com/Fnz11/traceit-cli/blob/master/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/fikri-nurdiansyah-214387286/
 [tele]: https://img.shields.io/badge/Telegram-2CA5E0?style=flat-squeare&logo=telegram&logoColor=white

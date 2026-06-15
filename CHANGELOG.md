@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-06-15
+
+### Fixed
+
+- **Critical: parseBlock infinite loop**: Fixed bug where missing `@traceit:end` tag caused infinite loop by initializing `endLine = -1` instead of `startLine`. Now returns `null` if no end tag found.
+- **Validate performance**: Added blame cache to prevent running `git blame` multiple times on same file. Validates once per file instead of once per block (10-100x faster on large codebases).
+- **Concurrency race condition**: Removed shared `domains` object mutation across workers. Each worker now uses local domains, merged after completion.
+- **Windows console blocking**: Changed all `process.stderr.write` to `process.stdout.write` to avoid Windows terminal pipeline saturation during concurrent file scanning.
+
+### Changed
+
+- Reduced `FILE_TIMEOUT` from 30s to 5s for faster failure detection on problematic files.
+- Removed artificial 10ms stagger between file processing (was causing unnecessary slowdown).
+- Removed timeout wrapper around `processFile` (timeouts don't work with sync I/O, user can Ctrl+C if needed).
+
 ## [0.1.1] - 2026-06-15
 
 ### Added
@@ -62,5 +77,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `missing_annotation` check is fully implemented.
 
 <!-- Versions -->
-[0.1.1]: https://github.com/Fnz11/traceit/releases/tag/v0.1.1
-[0.1.0]: https://github.com/Fnz11/traceit/releases/tag/v0.1.0
+[0.1.2]: https://github.com/Fnz11/traceit/releases/tag/v0.1.2
+[0.1.1]: https://github.com/Fnz11/traceit-cli/releases/tag/v0.1.1
+[0.1.0]: https://github.com/Fnz11/traceit-cli/releases/tag/v0.1.0

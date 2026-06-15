@@ -40,12 +40,12 @@ export function validate(): ValidationReport {
   const indexPath = path.join(process.cwd(), config.out);
 
   if (!fs.existsSync(indexPath)) {
-    console.error('traceit.json not found. Run "traceit generate" first.');
+    console.error('traceit.json not found. Run "traceit-cli generate" first.');
     process.exit(2);
   }
 
   if (!isGitRepo()) {
-    console.error('Not a git repository. Run "traceit validate" in a git repo.');
+    console.error('Not a git repository. Run "traceit-cli validate" in a git repo.');
     process.exit(2);
   }
 
@@ -74,6 +74,10 @@ export function validate(): ValidationReport {
 
   flattenFiles(index.files);
 
+  console.log(`Validating ${allBlocks.length} blocks across ${new Set(allBlocks.map(b => b.file)).size} files...`);
+
+  const blameCache: Map<string, BlameLine[]> = new Map();
+
   for (const { file, block } of allBlocks) {
     const fullPath = path.join(process.cwd(), file);
 
@@ -89,7 +93,14 @@ export function validate(): ValidationReport {
 
     const [codeStart, codeEnd] = block.codeLines;
     const [blockStart, blockEnd] = block.blockLines;
-    const blame = getFileBlame(fullPath);
+    
+    let blame: BlameLine[];
+    if (blameCache.has(fullPath)) {
+      blame = blameCache.get(fullPath)!;
+    } else {
+      blame = getFileBlame(fullPath);
+      blameCache.set(fullPath, blame);
+    }
 
     if (blame.length > 0) {
       const codeTime = getMaxTimestamp(blame, codeStart, codeEnd);

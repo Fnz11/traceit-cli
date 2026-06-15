@@ -24,10 +24,10 @@ function showVersion(): void {
 
 function showHelp(): void {
   console.log(`
-traceit - Zero-dependency CLI for AI agent code annotations
+traceit-cli - Zero-dependency CLI for AI agent code annotations
 
 Usage:
-  traceit <command> [options]
+  traceit-cli <command> [options]
 
 Commands:
   generate    Scan project and write traceit.json
@@ -55,16 +55,16 @@ Options:
   --danger        Only blocks with danger field (query)
 
 Examples:
-  traceit generate
-  traceit generate --out ./docs/traceit.json
-  traceit generate --quiet --max-files 5000
-  traceit validate --format text
-  traceit validate --out stale-report.json
-  traceit query --keyword "stripe webhook"
-  traceit query --keyword billing --top 5
-  traceit query --keyword "db query" --verbose
-  traceit query --keyword agent --top 10 --out results.txt
-  traceit init
+  traceit-cli generate
+  traceit-cli generate --out ./docs/traceit.json
+  traceit-cli generate --quiet --max-files 5000
+  traceit-cli validate --format text
+  traceit-cli validate --out stale-report.json
+  traceit-cli query --keyword "stripe webhook"
+  traceit-cli query --keyword billing --top 5
+  traceit-cli query --keyword "db query" --verbose
+  traceit-cli query --keyword agent --top 10 --out results.txt
+  traceit-cli init
 `);
 }
 
@@ -254,7 +254,7 @@ async function runQuery(args: Record<string, any>): Promise<void> {
   const indexPath = path.join(process.cwd(), config.out);
   
   if (!fs.existsSync(indexPath)) {
-    console.error('traceit.json not found. Run "traceit generate" first.');
+    console.error('traceit.json not found. Run "traceit-cli generate" first.');
     process.exit(2);
   }
   

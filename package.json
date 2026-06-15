@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "traceit": "bin/traceit.js"
+    "traceit-cli": "bin/traceit-cli.js"
   },
   "files": [
     "dist",
@@ -33,12 +33,12 @@
   "author": "Fikri Nurdiansyah",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Fnz11/traceit.git"
+    "url": "git+https://github.com/Fnz11/traceit-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/Fnz11/traceit/issues"
+    "url": "https://github.com/Fnz11/traceit-cli/issues"
   },
-  "homepage": "https://github.com/Fnz11/traceit",
+  "homepage": "https://github.com/Fnz11/traceit-cli",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^18.19.0",
